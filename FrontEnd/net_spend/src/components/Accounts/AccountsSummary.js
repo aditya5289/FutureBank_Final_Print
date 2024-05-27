@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from "react";
+import { useSelector } from "react-redux";
 import BankingService from "../../Services/bankingService";
 import "./AccountsSummary.css";
-import { useUser } from "../../context/UserContext";
 
 function AccountsSummary() {
   const [transactions, setTransactions] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  const { user } = useUser();
+  const user = useSelector((state) => state.user.currentUser);
 
   useEffect(() => {
     setTransactions([]);

@@ -8,6 +8,7 @@ class BankingService {
 
   // Method to update the authToken
   static updateAuthToken(token) {
+    localStorage.setItem('userToken', token); // Update token in local storage as well
     this.authToken = token;
   }
 
@@ -86,6 +87,36 @@ class BankingService {
     return this.performFetch(url, this.getOptions('GET'));
   }
 
+  // Method to add money to an account
+  static async addMoney(accountId, amount) {
+    const url = `${this.baseUrl}/${accountId}/deposit`;
+    const options = {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${this.authToken}`,
+      },
+      body: JSON.stringify(amount), // Direct numeric value as suggested
+    };
+
+    return this.performFetch(url, options);
+  }
+
+  // Method to withdraw money from an account
+  static async withdrawMoney(accountId, amount) {
+    const url = `${this.baseUrl}/${accountId}/withdraw`;
+    const options = {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${this.authToken}`,
+      },
+      body: JSON.stringify(amount), // Direct numeric value as suggested
+    };
+
+    return this.performFetch(url, options);
+  }
+
   // Utility method to handle fetch operations
   static async performFetch(url, options) {
     try {
@@ -110,6 +141,10 @@ class BankingService {
   // Utility method to handle response
   static async handleResponse(response) {
     if (!response.ok) {
+      if (response.status === 404) {
+        // Handle 404 error specifically for fetchTransactions
+        return [];
+      }
       const error = await response.text();
       throw new Error(`Network response was not ok: ${error}`);
     }

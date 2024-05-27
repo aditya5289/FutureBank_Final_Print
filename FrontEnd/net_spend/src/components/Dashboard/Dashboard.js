@@ -1,25 +1,29 @@
 import React, { useState, useEffect } from "react";
+import { useSelector, useDispatch } from "react-redux";
 import { Link } from "react-router-dom";
-import SpendAnalyzer from "./SpendAnalyzer";
 import QuickLinks from "../HomePage/QuickLinks";
 import PersonalizedOffers from "../HomePage/PersonalizedOffers";
 import { getCurrentUser } from "../../Services/authService";
 import bankingService from "../../Services/bankingService";
-import { PieChart, Pie, Cell, Tooltip, Legend } from "recharts";
 import "./Dashboard.css";
+import { setCurrentUser, setLoading, setError } from "../../redux/actions/authActions";
 
 function Dashboard() {
-  const [user, setUser] = useState(null);
+  const dispatch = useDispatch();
+  const user = useSelector((state) => state.user.currentUser);
+  const loading = useSelector((state) => state.user.isLoading);
+  const error = useSelector((state) => state.user.error);
+
   const [transactions, setTransactions] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [balance, setBalance] = useState(0);
   const [showBalance, setShowBalance] = useState(false);
 
   useEffect(() => {
     async function fetchUserDataAndBalance() {
+      dispatch(setLoading());
       try {
         const currentUser = await getCurrentUser();
-        setUser(currentUser);
+        dispatch(setCurrentUser(currentUser));
 
         if (currentUser?.accountNumber) {
           const initialTransactions = await bankingService.fetchTransactions(
@@ -29,20 +33,73 @@ function Dashboard() {
 
           const userBalance = await bankingService.getBalance(
             currentUser.accountNumber
-            
           );
           setBalance(userBalance);
-          console.log("im here ");
         }
       } catch (error) {
         console.error("Error fetching user data or transactions:", error);
-      } finally {
-        setLoading(false);
+        dispatch(setError(error));
       }
     }
 
     fetchUserDataAndBalance();
-  }, []); // Removed transactions from dependencies to avoid infinite loop
+  }, [dispatch]);
+
+  const token = localStorage.getItem('accessToken'); // Get the token from local storage
+
+  const handleAddMoney = async () => {
+    const amount = parseFloat(prompt("Enter amount to add:"));
+    if (!isNaN(amount) && amount > 0) {
+      try {
+        const response = await fetch(`http://localhost:8083/api/accounts/${user.accountNumber}/deposit`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}` // Use the token from local storage
+          },
+          body: JSON.stringify({ amount })
+        });
+  
+        if (!response.ok) {
+          throw new Error('Failed to add money');
+        }
+  
+        const updatedBalance = await bankingService.getBalance(user.accountNumber);
+        setBalance(updatedBalance);
+      } catch (error) {
+        console.error("Error adding money:", error);
+      }
+    } else {
+      alert("Please enter a valid amount.");
+    }
+  };
+
+  const handleWithdrawMoney = async () => {
+    const amount = parseFloat(prompt("Enter amount to withdraw:"));
+    if (!isNaN(amount) && amount > 0) {
+      try {
+        const response = await fetch(`http://localhost:8083/api/accounts/${user.accountNumber}/withdraw`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}` // Use the token from local storage
+          },
+          body: JSON.stringify({ amount })
+        });
+  
+        if (!response.ok) {
+          throw new Error('Failed to withdraw money');
+        }
+  
+        const updatedBalance = await bankingService.getBalance(user.accountNumber);
+        setBalance(updatedBalance);
+      } catch (error) {
+        console.error("Error withdrawing money:", error);
+      }
+    } else {
+      alert("Please enter a valid amount.");
+    }
+  };
 
   const getTimeBasedGreeting = () => {
     const hour = new Date().getHours();
@@ -57,44 +114,9 @@ function Dashboard() {
     return <div>Loading...</div>;
   }
 
-  // Aggregating small categories into "Other"
-  const aggregateCategories = (transactions, threshold = 0.05) => {
-    const sum = transactions.reduce((acc, curr) => acc + curr.amount, 0);
-    const categoryCounts = transactions.reduce((acc, { category, amount }) => {
-      acc[category] = (acc[category] || 0) + amount;
-      return acc;
-    }, {});
-
-    const aggregatedData = Object.entries(categoryCounts).reduce(
-      (acc, [category, amount]) => {
-        if (amount / sum < threshold) {
-          acc["Other"] = (acc["Other"] || 0) + amount;
-        } else {
-          acc[category] = amount;
-        }
-        return acc;
-      },
-      {}
-    );
-
-    return aggregatedData;
-  };
-
-  const accumulatedData = aggregateCategories(transactions);
-
-  const data = Object.keys(accumulatedData).map((category) => ({
-    name: category,
-    value: accumulatedData[category],
-  }));
-
-  const COLORS = [
-    "#0088FE",
-    "#00C49F",
-    "#FFBB28",
-    "#FF8042",
-    "#8884d8",
-    "#82ca9d",
-  ];
+  if (error) {
+    return <div>Error fetching user data or transactions: {error.message}</div>;
+  }
 
   const userGreeting = `${getTimeBasedGreeting()}, ${
     user?.firstName?.trim()
@@ -112,22 +134,28 @@ function Dashboard() {
         </div>
         <ul className="nav-links">
           <li>
-            <Link to="/accounts-summary">Accounts Summary</Link>
+            <button className="nav-button" onClick={handleAddMoney}>Add Money</button>
           </li>
           <li>
-            <Link to="/fund-transfer">Fund Transfer</Link>
+            <button className="nav-button" onClick={handleWithdrawMoney}>Withdraw Money</button>
           </li>
           <li>
-            <Link to="/payments-bills">Payments & Bills</Link>
+            <Link to="/accounts-summary" className="nav-button">Accounts Summary</Link>
           </li>
           <li>
-            <Link to="/profile-management">Profile Management</Link>
+            <Link to="/fund-transfer" className="nav-button">Fund Transfer</Link>
           </li>
           <li>
-            <Link to="/customer-support">Customer Support</Link>
+            <Link to="/payments-bills" className="nav-button">Payments & Bills</Link>
           </li>
           <li>
-            <Link to="/logout">Logout</Link>
+            <Link to="/profile-management" className="nav-button">Profile Management</Link>
+          </li>
+          <li>
+            <Link to="/customer-support" className="nav-button">Customer Support</Link>
+          </li>
+          <li>
+            <Link to="/logout" className="nav-button">Logout</Link>
           </li>
         </ul>
       </nav>
@@ -135,8 +163,7 @@ function Dashboard() {
       <header className="dashboard-header">
         <div className="user-greeting">{userGreeting}</div>
         <button className="view-balance-btn" onClick={toggleBalanceView}>
-          {showBalance ? "Hide Balance" : "View Balance"}{" "}
-          {/* Corrected the button text for toggling */}
+          {showBalance ? "Hide Balance" : "View Balance"}
         </button>
         {showBalance && (
           <div className="user-balance">Balance: ${balance.toFixed(2)}</div>
@@ -147,52 +174,6 @@ function Dashboard() {
         <div className="dashboard-content">
           <QuickLinks />
           <PersonalizedOffers />
-        </div>
-        <div>
-          <SpendAnalyzer transactions={transactions} />
-        </div>
-
-        <div className="expenditure-chart">
-          <div style={{ color: "black", fontSize: "25px" }}>
-            <h2>Expenditure Breakdown</h2>
-          </div>
-
-          <PieChart width={400} height={600}>
-            {" "}
-            {/* Adjust dimensions as needed */}
-            <Pie
-              data={data}
-              cx="50%"
-              cy="50%"
-              outerRadius={150} // Adjust radius as needed
-              fill="#8884d8"
-              dataKey="value"
-              nameKey="name"
-              label={({ name, percent }) => {
-                if (name.length > 10) {
-                  return `${name.slice(0, 10)}... ${(percent * 100).toFixed(
-                    0
-                  )}%`; // Truncate long names
-                } else {
-                  return `${name} ${(percent * 100).toFixed(0)}%`;
-                }
-              }}
-              startAngle={0}
-              endAngle={360}
-            >
-              {data.map((entry, index) => (
-                <Cell
-                  key={`cell-${index}`}
-                  fill={COLORS[index % COLORS.length]}
-                />
-              ))}
-            </Pie>
-            <Tooltip
-              contentStyle={{ fontSize: "14px" }} // Adjust tooltip font size
-              labelStyle={{ color: "#000", fontSize: "14px" }} // Adjust tooltip label font size and color
-            />
-            <Legend />
-          </PieChart>
         </div>
       </div>
     </div>

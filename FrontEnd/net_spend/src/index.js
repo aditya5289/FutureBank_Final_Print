@@ -1,23 +1,19 @@
-// src/index.js
 import React from 'react';
-import ReactDOM from 'react-dom/client'; 
-//import './index.css'; // Make sure to have this file for your styles
+import ReactDOM from 'react-dom/client';
+import './index.css'; // Ensure this file exists for your styles
 import App from './App';
 import { Provider } from 'react-redux';
-import {store} from '../src/store';
-import { UserProvider } from './context/UserContext'; // Adjusted import path
+import store from './redux/store'; // Corrected the import path for the store
 import reportWebVitals from './reportWebVitals'; // If you're using Create React App, this might be included by default
 
 const container = document.getElementById('root');
 const root = ReactDOM.createRoot(container); // Create a root.
 
-// Wrap App with both UserProvider and Redux Provider
+// Wrap App with Redux Provider
 root.render(
   <React.StrictMode>
     <Provider store={store}>
-      <UserProvider>
-        <App />
-      </UserProvider>
+      <App />
     </Provider>
   </React.StrictMode>
 );

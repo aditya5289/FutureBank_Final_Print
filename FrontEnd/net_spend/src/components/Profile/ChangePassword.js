@@ -1,10 +1,10 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useUser } from '../../context/UserContext';
+import { useSelector } from "react-redux";
 import "./ChangePassword.css"; // Adjust the path as necessary
 
 const ChangePassword = () => {
-  const { user } = useUser(); // Destructure user from context
+  const user = useSelector((state) => state.user.currentUser);
   const navigate = useNavigate();
   const [passwords, setPasswords] = useState({
     currentPassword: "",

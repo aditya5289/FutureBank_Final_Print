@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
 import { fetchMonthlyExpenditures, fetchExpenditureForecast } from '../../Services/expenditureService';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import "./SpendAnalyzer.css";
@@ -6,21 +7,25 @@ import "./SpendAnalyzer.css";
 function SpendAnalyzer() {
   const [monthlyExpenditures, setMonthlyExpenditures] = useState([]);
   const [forecast, setForecast] = useState([]);
+  const dispatch = useDispatch();
+  const user = useSelector(state => state.user.currentUser);
 
   useEffect(() => {
-    const loadExpendituresAndForecast = async () => {
-      try {
-        const monthlyData = await fetchMonthlyExpenditures();
-        setMonthlyExpenditures(monthlyData);
-        const forecastData = await fetchExpenditureForecast();
-        setForecast(Array.isArray(forecastData) ? forecastData : [forecastData]);
-      } catch (error) {
-        console.error('Error fetching expenditure data:', error);
-      }
-    };
+    if (user) {
+      const loadExpendituresAndForecast = async () => {
+        try {
+          const monthlyData = await fetchMonthlyExpenditures();
+          setMonthlyExpenditures(monthlyData);
+          const forecastData = await fetchExpenditureForecast();
+          setForecast(Array.isArray(forecastData) ? forecastData : [forecastData]);
+        } catch (error) {
+          console.error('Error fetching expenditure data:', error);
+        }
+      };
 
-    loadExpendituresAndForecast();
-  }, []);
+      loadExpendituresAndForecast();
+    }
+  }, [user]);
 
   const monthNames = ["January", "February", "March", "April", "May", "June",
                       "July", "August", "September", "October", "November", "December"];

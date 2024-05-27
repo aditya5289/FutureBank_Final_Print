@@ -1,4 +1,3 @@
-// authService.js
 const API_BASE_URL = 'http://localhost:8082/api/auth';
 
 // Function to log in a user
@@ -15,18 +14,34 @@ export async function loginUser(credentials) {
             throw new Error('Login failed');
         }
         const data = await response.json();
-        saveUserDetails(data.user, data.token); // Saves user details and token in localStorage
-        return data.user; // Returns the user object
+        console.log('Login response data:', data); // Debug statement
+
+        if (!data.token) {
+            throw new Error('Invalid response data');
+        }
+
+        // Assuming the user object is retrieved elsewhere after logging in
+        saveUserDetails({}, data.token, ""); // Save token, assume no refresh token for now
+        return data; // Returns the data object containing token
     } catch (error) {
         console.error('Login error:', error);
         throw error;
     }
 }
 
+// Save user details and tokens in localStorage
+export function saveUserDetails(user, accessToken, refreshToken) {
+    console.log('Saving user details:', user, accessToken, refreshToken); // Debug statement
+    localStorage.setItem('userDetails', JSON.stringify(user));
+    localStorage.setItem('accessToken', accessToken);
+    localStorage.setItem('refreshToken', refreshToken);
+}
+
 // Function to get the current user's details
 export async function getCurrentUser() {
     try {
-        const token = localStorage.getItem('userToken');
+        const token = localStorage.getItem('accessToken');
+        console.log('Retrieved token:', token); // Debug statement
         if (!token) {
             throw new Error('No token found');
         }
@@ -43,14 +58,14 @@ export async function getCurrentUser() {
         return user; // Returns the current user details
     } catch (error) {
         console.error('Error fetching user details:', error);
-        throw error;
+        throw new Error(error.message); // Serialize the error message
     }
 }
 
 // Function to update high security settings
 export async function updateSecuritySettings(securitySettings) {
     try {
-        const token = localStorage.getItem('userToken');
+        const token = localStorage.getItem('accessToken');
         if (!token) {
             throw new Error('Authentication token not found');
         }
@@ -72,14 +87,8 @@ export async function updateSecuritySettings(securitySettings) {
     } catch (error) {
         console.error('Error updating high security settings:', error);
         alert("Failed to update high security options. Please try again.");
-        throw error;
+        throw new Error(error.message); // Serialize the error message
     }
-}
-
-// Save user details and token in localStorage
-export function saveUserDetails(user, token) {
-    localStorage.setItem('userDetails', JSON.stringify(user));
-    localStorage.setItem('userToken', token);
 }
 
 // Retrieve user details from localStorage
@@ -90,23 +99,36 @@ export function getUserDetails() {
 
 // Check if the user is logged in
 export function isLoggedIn() {
-    const token = localStorage.getItem('userToken');
+    const token = localStorage.getItem('accessToken');
     return !!token; // Converts to boolean - true if token exists, false otherwise
 }
 
 // Logout the user
 export function logoutUser() {
-    localStorage.removeItem('userToken');
-    localStorage.removeItem('userDetails');
+    localStorage.clear(); // Clear all local storage items
     // Optionally redirect the user to the login page
     // window.location.href = '/login';
 }
 
-// Placeholder for refresh token functionality
-async function refreshToken() {
-    // Implement token refresh logic here
-    // This will depend on your backend's token refresh mechanism
-    throw new Error('refreshToken function not implemented');
+// Function to refresh the access token
+export async function refreshToken() {
+    const refreshToken = localStorage.getItem('refreshToken');
+    if (!refreshToken) {
+        throw new Error('No refresh token found');
+    }
+    const response = await fetch(`${API_BASE_URL}/refresh`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ token: refreshToken }),
+    });
+    if (!response.ok) {
+        throw new Error('Failed to refresh token');
+    }
+    const data = await response.json();
+    localStorage.setItem('accessToken', data.accessToken);
+    return data.accessToken;
 }
 
 // Conceptual method for automatic token refresh and retry on API calls
@@ -116,10 +138,10 @@ export async function autoRefreshTokenAndRetry(originalRequest) {
         if (newToken) {
             // Update the original request with new token and retry
             originalRequest.headers['Authorization'] = `Bearer ${newToken}`;
-            return fetch(originalRequest.url, originalRequest.options);
+            return fetch(originalRequest.url, originalRequest);
         }
     } catch (error) {
         console.error('Auto-refresh token and retry error:', error);
-        throw error;
+        throw new Error(error.message); // Serialize the error message
     }
 }

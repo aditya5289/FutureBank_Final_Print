@@ -36,14 +36,28 @@
   gap: 20px;
 }
 
-.nav-links li a {
-  color: #fff;
-  text-decoration: none;
-  transition: color 0.3s ease;
+.nav-links li {
+  display: flex;
+  align-items: center;
 }
 
-.nav-links li a:hover {
-  color: #f0f0f0; /* Lighter text color on hover */
+.nav-links .nav-button {
+  background-color: #007bff;
+  border: none;
+  color: white;
+  padding: 10px 15px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 16px;
+  margin: 4px 2px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background-color 0.3s ease;
+}
+
+.nav-links .nav-button:hover {
+  background-color: #0056b3; /* Darker shade on hover */
 }
 
 /* Dashboard header */
@@ -54,6 +68,11 @@
   justify-content: space-between;
   color: #4744f9;
   background-color: rgba(255, 255, 255, 0.6);
+}
+/* Dashboard.css */
+.quick-links h2,
+.personalized-offers h2 {
+  color: #007bff; /* A commonly used shade of blue */
 }
 
 .user-greeting {
@@ -77,6 +96,7 @@
 .user-balance {
   font-size: 20px;
 }
+
 /* Main content container */
 .dashboard-content {
   display: flex;
@@ -105,6 +125,12 @@
   overflow: visible; /* Hide overflowing text */
   text-overflow: ellipsis; /* Show ellipsis for overflow */
   color: black;
+}
+/* Dashboard.css */
+
+.quick-links,
+.personalized-offers {
+  color: #007bff; /* Bootstrap primary blue for example, or any blue you prefer */
 }
 
 /* Adjusted overflow for svg elements */

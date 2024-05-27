@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
+import { useSelector } from "react-redux";
 import './FundTransfer.css';
 import { fundTransferService } from "../../Services/fundTransfer";
-import { useUser } from "../../context/UserContext"; // Adjust the import path to where your UserContext is located
 
 const transactionCategories = [
   { key: "SALARY", description: "Salary" },
@@ -24,7 +24,9 @@ const transferTypes = [
 ];
 
 const FundTransfer = () => {
-  const { user, loading, error } = useUser();
+  const user = useSelector((state) => state.user.currentUser);
+  const loading = useSelector((state) => state.user.isLoading);
+  const error = useSelector((state) => state.user.error);
 
   const [transferDetails, setTransferDetails] = useState({
     fromAccount: "",

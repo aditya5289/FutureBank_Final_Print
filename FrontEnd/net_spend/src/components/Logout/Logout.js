@@ -1,15 +1,15 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useDispatch } from 'react-redux';
+import { logout } from '../../redux/actions/authActions';
 
 const Logout = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
 
   const handleLogout = () => {
-    // Perform any necessary cleanup here, like clearing user data from state or localStorage
-    // For example: localStorage.removeItem('userToken');
-
-    // Redirect to the login page
-    navigate('/login');
+    dispatch(logout()); // Dispatch the logout action to clear the user state and tokens
+    navigate('/login'); // Navigate to the login page after logout
   };
 
   return (

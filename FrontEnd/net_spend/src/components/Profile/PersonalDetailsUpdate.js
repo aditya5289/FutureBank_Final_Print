@@ -1,10 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { useUser } from '../../context/UserContext'; // Adjust the path to match where your UserContext is located
+import { useSelector } from 'react-redux';
+import './PersonalDetailsUpdate.css'; // Adjust the path if necessary
 
 const PersonalDetailsUpdate = () => {
-    const { user, loading, error } = useUser(); // Access user details from context
+    const user = useSelector((state) => state.user.currentUser);
+    const loading = useSelector((state) => state.user.isLoading);
+    const error = useSelector((state) => state.user.error);
+
     const [userDetails, setUserDetails] = useState({
-        userId: '', // These will be populated from the user context
+        userId: '', // These will be populated from the Redux store
         firstName: '',
         lastName: '',
         email: '', // User input
@@ -14,16 +18,20 @@ const PersonalDetailsUpdate = () => {
     // Effect to populate userId when user data is available
     useEffect(() => {
         if (user) {
-            setUserDetails(details => ({
+            setUserDetails((details) => ({
                 ...details,
                 userId: user.userId, // Ensure this matches your user object property name
+                firstName: user.firstName || '',
+                lastName: user.lastName || '',
+                email: user.email || '',
+                phoneNumber: user.phoneNumber || '',
             }));
         }
     }, [user]); // Depend on user to repopulate form when user data changes
 
     const handleChange = (e) => {
         const { name, value } = e.target;
-        setUserDetails(prevDetails => ({
+        setUserDetails((prevDetails) => ({
             ...prevDetails,
             [name]: value,
         }));

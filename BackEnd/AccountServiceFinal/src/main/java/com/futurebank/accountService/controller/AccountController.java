@@ -1,20 +1,13 @@
 package com.futurebank.accountService.controller;
 
+import java.math.BigDecimal;
 import java.util.List;
 
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-
+import org.springframework.web.bind.annotation.*;
 import com.futurebank.accountService.model.Account;
 import com.futurebank.accountService.model.AccountCreationRequest;
 import com.futurebank.accountService.model.Transaction;
@@ -28,6 +21,8 @@ import com.futurebank.accountService.service.TransferService;
 @CrossOrigin(origins = "*") // Adjust the origins as per your requirements
 public class AccountController {
 
+    private static final Logger logger = LoggerFactory.getLogger(AccountController.class);
+
     private final AccountService accountService;
     private final TransactionService transactionService;
     private final TransferService transferService;
@@ -40,20 +35,22 @@ public class AccountController {
 
     @PostMapping
     public ResponseEntity<?> createAccount(@RequestBody AccountCreationRequest request) {
-        Account account = accountService.createAccount(request.getUserId(), request.getAccountType());
-        if (account != null) {
+        try {
+            Account account = accountService.createAccount(request.getUserId(), request.getAccountType());
             return new ResponseEntity<>(account, HttpStatus.CREATED);
-        } else {
+        } catch (Exception e) {
+            logger.error("Failed to create account: {}", e.getMessage(), e);
             return new ResponseEntity<>("Account creation failed", HttpStatus.BAD_REQUEST);
         }
     }
 
     @PutMapping("/{accountId}")
     public ResponseEntity<?> updateAccount(@PathVariable Long accountId, @RequestBody Account accountDetails) {
-        Account updatedAccount = accountService.updateAccount(accountId, accountDetails);
-        if (updatedAccount != null) {
+        try {
+            Account updatedAccount = accountService.updateAccount(accountId, accountDetails);
             return ResponseEntity.ok(updatedAccount);
-        } else {
+        } catch (Exception e) {
+            logger.error("Failed to update account {}: {}", accountId, e.getMessage(), e);
             return ResponseEntity.notFound().build();
         }
     }
@@ -70,10 +67,11 @@ public class AccountController {
 
     @GetMapping("/{accountId}")
     public ResponseEntity<?> getAccountById(@PathVariable Long accountId) {
-        Account account = accountService.getAccountById(accountId);
-        if (account != null) {
+        try {
+            Account account = accountService.getAccountById(accountId);
             return ResponseEntity.ok(account);
-        } else {
+        } catch (Exception e) {
+            logger.error("Failed to retrieve account {}: {}", accountId, e.getMessage(), e);
             return ResponseEntity.notFound().build();
         }
     }
@@ -84,10 +82,10 @@ public class AccountController {
         if (isDeleted) {
             return ResponseEntity.noContent().build();
         } else {
+            logger.error("Failed to delete account {}", accountId);
             return ResponseEntity.notFound().build();
         }
     }
-
 
     @PostMapping("/transfers")
     public ResponseEntity<?> transferFunds(@RequestBody TransferRequest transferRequest) {
@@ -96,24 +94,14 @@ public class AccountController {
                 transferRequest.getFromAccount(),
                 transferRequest.getToAccount(),
                 transferRequest.getAmount(),
-                transferRequest.getCategory()  );
-            
-      //  	System.out.println("Sendin this to front end "+ transaction);
-        	
-            if (transaction != null) {
-            	System.out.println("Sendin this to front end "+ ResponseEntity.ok(transaction));// Assuming transaction is successful and not null
-                return ResponseEntity.ok(transaction);
-                
-            } else {
-                // Handling the case where transaction is null, indicating failure
-                // Though typically, you'd throw an exception rather than returning null for failures
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Transfer failed due to invalid transaction details.");
-            }
+                transferRequest.getCategory());
+            return ResponseEntity.ok(transaction);
         } catch (Exception e) {
-            // Exception handling, e.g., if transaction couldn't be processed
+            logger.error("Failed to transfer funds: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("An error occurred: " + e.getMessage());
         }
     }
+
     @GetMapping("/balance/{accountId}")
     public ResponseEntity<?> getAccountBalance(@PathVariable Long accountId) {
         try {
@@ -124,20 +112,50 @@ public class AccountController {
                 return ResponseEntity.notFound().build();
             }
         } catch (Exception e) {
+            logger.error("Failed to fetch balance for account {}: {}", accountId, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error fetching account balance: " + e.getMessage());
         }
     }
 
     @GetMapping("/transactions/{accountId}")
-    public ResponseEntity<List<Transaction>> getTransactionsByAccountId(@PathVariable Long accountId) {
-          System.out.println("I m here.....");;
+    public ResponseEntity<?> getTransactionsByAccountId(@PathVariable Long accountId) {
         List<Transaction> transactions = transactionService.getTransactionHistoryByAccountId(accountId);
-       
         if (!transactions.isEmpty()) {
-        	 System.out.println("Transactions Details by Account ID"+transactions.toString());
             return ResponseEntity.ok(transactions);
         } else {
+            logger.info("No transactions found for account {}", accountId);
             return ResponseEntity.notFound().build();
+        }
+    }
+
+    @PostMapping("/{accountId}/deposit")
+    public ResponseEntity<?> addMoney(@PathVariable Long accountId, @RequestBody MoneyRequest request) {
+        BigDecimal amount = request.getAmount();
+        logger.info("Request to deposit {} to account {}", amount, accountId);
+        try {
+            Account account = accountService.deposit(accountId, amount);
+            return ResponseEntity.ok(account);
+        } catch (Exception e) {
+            logger.error("Error depositing money to account {}: {}", accountId, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to deposit money: " + e.getMessage());
+        }
+    }
+
+    @PostMapping("/{accountId}/withdraw")
+    public ResponseEntity<?> withdrawMoney(@PathVariable Long accountId, @RequestBody MoneyRequest request) {
+        BigDecimal amount = request.getAmount();
+        logger.info("Request to withdraw {} from account {}", amount, accountId);
+        try {
+            Account account = accountService.withdraw(accountId, amount);
+            if (account != null) {
+                return ResponseEntity.ok(account);
+            } else {
+                logger.warn("Insufficient funds for account {}", accountId);
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Insufficient funds");
+            }
+        } catch (Exception e) {
+            logger.error("Error withdrawing money from account {}: {}", accountId, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to withdraw money: " + e.getMessage());
         }
     }
 }
